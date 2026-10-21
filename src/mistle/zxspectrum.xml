@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ZX Spectrum configuration -->
+<config name="ZXSpectrum" version="0">
+  <actions>
+    <action name="init">
+      <!-- (try to) load config from sd card -->
+      <load file="zxspectrum.ini"/>
+      <set id="R" value="1"/>  <!-- keep machine in reset -->
+    </action>
+    
+    <!-- the ready action is being executed once all -->
+    <!-- initialization has been done -->
+    <action name="ready">
+      <set id="R" value="0"/>  <!-- release reset -->
+    </action>
+      
+    <action name="save">
+      <!-- save config to sd card -->
+      <save file="zxspectrum.ini"/>
+    </action>
+      
+    <action name="reset">
+      <!-- trigger a system reset -->
+      <set id="R" value="1"/>
+      <delay ms="10"/>
+      <set id="R" value="0"/>      
+    </action>
+    
+    <action name="reset_hide">
+      <!-- trigger a system reset and hide OSD -->
+      <link action="reset"/>
+      <hide/>      
+    </action>      
+
+    <action name="hide">
+      <hide/>      
+    </action>      
+  </actions>
+  
+  <menu label="ZX Spectrum">
+    <fileselector label="Tape" ext="tap" index="0" action="hide"/>
+    <button label="Reset" action="reset_hide"/>
+  </menu>    
+</config>

@@ -1,0 +1,40 @@
+--- obj_dir/ghdl/T80.v.orig	2026-10-09 18:09:32.895431707 +0200
++++ obj_dir/ghdl/T80.v	2026-10-09 18:10:14.524173405 +0200
+@@ -1688,17 +1688,7 @@
+   /*# ../src/T80/T80.vhd:273:133 */
+   assign n47 = {n46, acc};
+   /*# ../src/T80/T80.vhd:275:9 */
+-  T80_MCode #(
+-    .Mode(0),
+-    .Flag_C(0),
+-    .Flag_N(1),
+-    .Flag_P(2),
+-    .Flag_X(3),
+-    .Flag_H(4),
+-    .Flag_Y(5),
+-    .Flag_Z(6),
+-    .Flag_S(7))
+-    mcode (
++  T80_MCode mcode (
+     .IR(ir),
+     .ISet(iset),
+     .MCycle(mcycle),
+@@ -1763,17 +1753,7 @@
+     .No_PC(no_pc),
+     .XYbit_undoc(xybit_undoc));
+   /*# ../src/T80/T80.vhd:351:9 */
+-  T80_ALU #(
+-    .Mode(0),
+-    .Flag_C(0),
+-    .Flag_N(1),
+-    .Flag_P(2),
+-    .Flag_X(3),
+-    .Flag_H(4),
+-    .Flag_Y(5),
+-    .Flag_Z(6),
+-    .Flag_S(7))
+-    alu (
++  T80_ALU alu (
+     .Arith16(arith16_r),
+     .Z16(z16_r),
+     .WZ(wz),

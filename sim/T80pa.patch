@@ -1,0 +1,22 @@
+--- obj_dir/ghdl/T80pa.v.orig	2026-10-09 17:55:21.206420863 +0200
++++ obj_dir/ghdl/T80pa.v	2026-10-09 17:56:36.638675006 +0200
+@@ -157,18 +157,7 @@
+   /*# ../src/T80/T80pa.vhd:111:18 */
+   assign n12 = CEN_p & n11;
+   /*# ../src/T80/T80pa.vhd:114:5 */
+-  T80 #(
+-    .Mode(0),
+-    .IOWait(1),
+-    .Flag_C(0),
+-    .Flag_N(1),
+-    .Flag_P(2),
+-    .Flag_X(3),
+-    .Flag_H(4),
+-    .Flag_Y(5),
+-    .Flag_Z(6),
+-    .Flag_S(7))
+-    u0 (
++  T80 u0 (
+     .RESET_n(RESET_n),
+     .CLK_n(CLK),
+     .CEN(cen),

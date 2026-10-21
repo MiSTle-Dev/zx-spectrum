@@ -1,0 +1,92 @@
+[*]
+[*] GTKWave Analyzer v3.3.126 (w)1999-2026 BSI
+[*] Tue Oct 20 07:01:40 2026
+[*]
+[dumpfile] "obj_dir/waveform.fst"
+[dumpfile_mtime] "Tue Oct 20 06:59:10 2026"
+[dumpfile_size] 7547728
+[savefile] "sim.gtkw"
+[timestart] 15000017621
+[size] 1983 1154
+[pos] 156 121
+*-32.600784 18067876652 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.zxspectrum.
+[treeopen] TOP.zxspectrum.companion.
+[treeopen] TOP.zxspectrum.companion.mcu.
+[treeopen] TOP.zxspectrum.companion.sd_card.
+[treeopen] TOP.zxspectrum.cpu.
+[treeopen] TOP.zxspectrum.kbd.
+[sst_width] 269
+[signals_width] 254
+[sst_expanded] 1
+[sst_vpaned_height] 640
+@28
+TOP.zxspectrum.clk_sys
+TOP.zxspectrum.cpu.RESET_n
+TOP.zxspectrum.sd_out_hs
+TOP.zxspectrum.sd_out_vs
+@22
+TOP.zxspectrum.sd_out_r[4:0]
+TOP.zxspectrum.sd_out_g[4:0]
+TOP.zxspectrum.sd_out_b[4:0]
+TOP.zxspectrum.cpu.A[15:0]
+@28
+TOP.zxspectrum.cpu.M1_n
+@22
+TOP.zxspectrum.cpu.DI[7:0]
+@28
+TOP.zxspectrum.cpu.MREQ_n
+TOP.zxspectrum.vram_sel
+TOP.zxspectrum.ram_rd
+TOP.zxspectrum.ram_we
+TOP.zxspectrum.ram.refresh
+TOP.zxspectrum.ram.next_port[1:0]
+TOP.zxspectrum.ram.port[1:0]
+TOP.zxspectrum.ram.state[1:0]
+@22
+TOP.zxspectrum.ram.SDRAM_DQ_R[15:0]
+TOP.SDRAM_DQ[15:0]
+@200
+-Companion
+@24
+[color] 2
+TOP.zxspectrum.companion.tap_len[23:0]
+TOP.zxspectrum.companion.tap_fifo_free[9:0]
+TOP.zxspectrum.companion.tap_fifo_used[9:0]
+@28
+TOP.zxspectrum.companion.mcu_sdc_strobe
+TOP.zxspectrum.companion.sd_rd
+TOP.zxspectrum.companion.sd_busy
+TOP.zxspectrum.companion.sd_done
+@22
+TOP.zxspectrum.companion.sd_sector[31:0]
+@28
+TOP.zxspectrum.companion.sd_data_en
+@22
+TOP.zxspectrum.companion.sd_data_addr[8:0]
+TOP.zxspectrum.companion.sd_data_byte[7:0]
+TOP.zxspectrum.companion.tap_fifo_out_data[7:0]
+@24
+TOP.zxspectrum.companion.tap_chunk_len[15:0]
+@22
+[color] 1
+TOP.zxspectrum.companion.tap_fifo_rd_state[7:0]
+@24
+TOP.zxspectrum.companion.tap_fifo_out_strobe
+@22
+TOP.zxspectrum.companion.tap_chunk_xor[7:0]
+TOP.zxspectrum.kbd.keys.keys[6][4:0]
+@28
+TOP.zxspectrum.tape_in
+@24
+TOP.zxspectrum.companion.pulse_type[2:0]
+TOP.zxspectrum.companion.unnamedblk1.pulse_t_state_cnt[19:0]
+@22
+TOP.zxspectrum.companion.pulse_data_byte[7:0]
+@24
+TOP.zxspectrum.companion.pulse_data_bit[2:0]
+TOP.zxspectrum.companion.pulse_data_pre_cnt[15:0]
+TOP.zxspectrum.companion.pulse_data_cnt[15:0]
+[pattern_trace] 1
+[pattern_trace] 0
