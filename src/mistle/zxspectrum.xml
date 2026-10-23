@@ -18,14 +18,14 @@
       <!-- save config to sd card -->
       <save file="zxspectrum.ini"/>
     </action>
-      
+
     <action name="reset">
       <!-- trigger a system reset -->
       <set id="R" value="1"/>
       <delay ms="10"/>
       <set id="R" value="0"/>      
     </action>
-    
+
     <action name="reset_hide">
       <!-- trigger a system reset and hide OSD -->
       <link action="reset"/>
@@ -39,6 +39,11 @@
   
   <menu label="ZX Spectrum">
     <fileselector label="Tape" ext="tap" index="0" action="hide"/>
+    <list label="Joystick:" id="J" default="0">
+      <listentry label="Interface II" value="0"/>
+      <listentry label="Kempston" value="1"/>
+    </list> 
+    <button label="Save settings" action="save"/>
     <button label="Reset" action="reset_hide"/>
   </menu>    
 </config>

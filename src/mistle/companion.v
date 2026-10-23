@@ -32,6 +32,7 @@ module companion (
 
     // OSD controlled variables
     output	 osd_reset,
+    output	 osd_joystick_type,
 
     output [7:0] joystick,
 		  
@@ -109,6 +110,7 @@ sysctrl sysctrl (
   
   // values controlled by the OSD
   .system_reset(osd_reset),
+  .system_joystick_type(osd_joystick_type),
   
   .int_out_n(mcu_intn),
   .int_in({ 4'b0000, sdc_int, 3'b000 }),
@@ -290,7 +292,8 @@ always @(posedge clk) begin
    reg [15:0] pulse_counter;
    reg start_requested;   
 
-   if(reset) begin
+   // ejecting the image (size == 0) resets the entire tap player
+   if(reset || (image_mounted && image_size == 24'd0)) begin
       pulse_counter <= 0;
       pulse_type <= PULSE_TYPE_NONE;
       tap_request_next_data_byte <= 1'b0;      
@@ -403,7 +406,8 @@ reg [7:0] tap_fifo_rd_state;
 reg [7:0] tap_chunk_xor;   
 
 always @(posedge clk) begin
-   if(reset) begin
+   // ejecting the image (size == 0) resets the entire tap player
+   if(reset || (image_mounted && image_size == 24'd0)) begin
       tap_fifo_rd_ptr <= 9'd0;
       tap_fifo_rd_state <= 8'd0;   
       pulse_start_block <= 1'b0;
@@ -492,7 +496,8 @@ reg [31:0] tap_fifo_wr_delay;
 reg [23:0] tap_len;   
 
 always @(posedge clk) begin
-   if(reset) begin
+   // ejecting the image (size == 0) resets the entire tap player
+   if(reset || (image_mounted && image_size == 24'd0)) begin
       tap_fifo_wr_state <= 8'd0;
       tap_fifo_wr_ptr <= 9'd0;
    end else begin
@@ -561,7 +566,7 @@ always @(posedge clk) begin
 	end
 	
       endcase // case (tap_fifo_wr_state)
-   end
+   end // else: !if(reset)
 end
 
    

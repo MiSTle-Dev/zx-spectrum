@@ -363,17 +363,11 @@ end
 wire [10:0] ps2_key;
 wire [24:0] ps2_mouse;
 
+wire osd_joystick_type;   
 wire  [7:0] joystick;    // digital joystick data sent from companion
 
-`ifdef DISABLED
-wire  [7:0] joystick_0;
-wire  [7:0] joystick_1;
-wire  [7:0] joy0 = status[7] ? joystick_1 : joystick_0; // Kempston
-wire  [7:0] joy1 = status[7] ? joystick_0 : joystick_1; // Sinclair
-`else
-wire  [7:0] joy0 = 8'h00;    // Kempston
-wire  [7:0] joy1 = joystick; // Sinclair
-`endif
+wire  [7:0] joy0 = osd_joystick_type?joystick:8'h00; // Kempston
+wire  [7:0] joy1 = osd_joystick_type?8'h00:joystick; // Sinclair Interface II
    
 wire  [1:0] buttons;
 wire  [1:0] switches;
@@ -1036,6 +1030,7 @@ companion companion (
     .tap(tape_in),
    
     .osd_reset(osd_reset),
+    .osd_joystick_type(osd_joystick_type),
 		     
     .hs_n(!sd_out_hs),
     .vs_n(!sd_out_vs),

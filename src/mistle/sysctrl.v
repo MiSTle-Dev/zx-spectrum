@@ -19,6 +19,7 @@ module sysctrl (
   output reg [7:0]  int_ack,
 
   output 	    system_reset,
+  output reg	    system_joystick_type,
 		
   input [1:0]	    buttons, // S0 and S1 buttons on Tang Nano 20k
 
@@ -66,7 +67,8 @@ always @(posedge clk) begin
       color <= 24'h000000;  // color black -> rgb led off
 
       main_reset <= 1'b1;
-
+      system_joystick_type <= 1'b0;  // default joystick interface II      
+  
       buttons_irq_enable <= 1'b1;  // allow buttons irq
       int_ack <= 8'h00;
       coldboot <= 1'b1;      // reset is actually the power-on-reset
@@ -134,6 +136,8 @@ always @(posedge clk) begin
                 if(state == 4'd1) begin
                    // Value "R": reset(1) or run(0)
                    if(id == "R") main_reset <= data_in[0];
+                   // Value "J": Joystick Interface II(0) or Kempston(1)
+                   if(id == "J") system_joystick_type <= data_in[0];
                 end
             end
 
