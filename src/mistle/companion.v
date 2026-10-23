@@ -225,7 +225,7 @@ always @(posedge clk) begin
    if(reset) begin
       powerup_counter <= 32'd0;
       tape_autoload_during_powerup <= 1'b0;
-   end else if(powerup_counter < 32'd56_001_000) begin
+   end else if(powerup_counter < 32'd70_001_000) begin
       // check for tape insertion during powerup and with
       // autoload enabled
       if(image_mounted && image_size != 24'd0 && osd_tape_autoload) begin
@@ -238,11 +238,11 @@ always @(posedge clk) begin
 end
 
 // device is still powering up
-wire powerup = powerup_counter < 32'd56_000_000;
+wire powerup = powerup_counter < 32'd70_000_000;
 
 // trigger signal that fires if autoload was enabled and tape was inserted
 // during powerup
-wire tape_load_delayed_trigger = powerup_counter == 32'd56_000_999 && tape_autoload_during_powerup;
+wire tape_load_delayed_trigger = powerup_counter == 32'd70_000_999 && tape_autoload_during_powerup;
    
 reg [7:0] tap_fifo_out_data;   
 reg       tap_fifo_out_strobe;   
@@ -586,43 +586,43 @@ always @(posedge clk) begin
 
 	      if(tap_fifo_wr_delay == 32'd56_000_000-0*32'd5_000_000) begin
 		 $display("companion.v: TAP press J");	
-		 kbd_data_autoloader <= 8'h0d; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'h0d; kbd_toggle_autoloader <= !kbd_toggle_autoloader;
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-1*32'd5_000_000) begin
 		 $display("companion.v: TAP release J");	
-		 kbd_data_autoloader <= 8'h8d; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'h8d; kbd_toggle_autoloader <= !kbd_toggle_autoloader; 
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-2*32'd5_000_000) begin
 		 $display("companion.v: TAP press Ctrl");	
-		 kbd_data_autoloader <= 8'h68; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'h68; kbd_toggle_autoloader <= !kbd_toggle_autoloader;
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-3*32'd5_000_000) begin
 		 $display("companion.v: TAP press P");	
-		 kbd_data_autoloader <= 8'h13; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'h13; kbd_toggle_autoloader <= !kbd_toggle_autoloader; 
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-4*32'd5_000_000) begin
 		 $display("companion.v: TAP release P");	
-		 kbd_data_autoloader <= 8'h93; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'h93; kbd_toggle_autoloader <= !kbd_toggle_autoloader;
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-5*32'd5_000_000) begin
 		 $display("companion.v: TAP press P");	
-		 kbd_data_autoloader <= 8'h13; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'h13; kbd_toggle_autoloader <= !kbd_toggle_autoloader;
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-6*32'd5_000_000) begin
 		 $display("companion.v: TAP release P");	
-		 kbd_data_autoloader <= 8'h93; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'h93; kbd_toggle_autoloader <= !kbd_toggle_autoloader;
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-7*32'd5_000_000) begin
 		 $display("companion.v: TAP release Ctrl");	
-		 kbd_data_autoloader <= 8'he8; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'he8; kbd_toggle_autoloader <= !kbd_toggle_autoloader;
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-8*32'd5_000_000) begin
 		 $display("companion.v: TAP press Enter");	
-		 kbd_data_autoloader <= 8'h28; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'h28; kbd_toggle_autoloader <= !kbd_toggle_autoloader;
 	      end
 	      if(tap_fifo_wr_delay == 32'd56_000_000-9*32'd5_000_000) begin
 		 $display("companion.v: TAP release Enter");	
-		 kbd_data_autoloader <= 8'ha8; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+		 kbd_data_autoloader <= 8'ha8; kbd_toggle_autoloader <= !kbd_toggle_autoloader;
 	      end
 	   end
 	   
