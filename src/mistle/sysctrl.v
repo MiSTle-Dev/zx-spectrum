@@ -20,6 +20,7 @@ module sysctrl (
 
   output 	    system_reset,
   output reg	    system_joystick_type,
+  output reg	    system_tape_autoload,
 		
   input [1:0]	    buttons, // S0 and S1 buttons on Tang Nano 20k
 
@@ -68,6 +69,7 @@ always @(posedge clk) begin
 
       main_reset <= 1'b1;
       system_joystick_type <= 1'b0;  // default joystick interface II      
+      system_tape_autoload <= 1'b0;  // default tape autoload off
   
       buttons_irq_enable <= 1'b1;  // allow buttons irq
       int_ack <= 8'h00;
@@ -138,6 +140,8 @@ always @(posedge clk) begin
                    if(id == "R") main_reset <= data_in[0];
                    // Value "J": Joystick Interface II(0) or Kempston(1)
                    if(id == "J") system_joystick_type <= data_in[0];
+                   // Value "A": Tape autoload off(0) or on(1)
+                   if(id == "A") system_tape_autoload <= data_in[0];
                 end
             end
 

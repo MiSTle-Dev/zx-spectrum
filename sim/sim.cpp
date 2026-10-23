@@ -88,7 +88,7 @@ extern "C" void display_simtime(void) {
   printf("%.3fms ",  simulation_time*1000);
 }
 
-#if 0
+#if 1
 #define EVT_SDC_MOUNT  0.01
 #else
 #define EVT_KBD_LOAD   1.7
@@ -117,6 +117,8 @@ void companion(void) {
     { EVT_KBD_LOAD+0.7, "\x01\x01\xe8\xff", "Release Ctrl" },
     { EVT_KBD_LOAD+0.8, "\x01\x01\x28\xff", "Press Enter" },
     { EVT_KBD_LOAD+0.9, "\x01\x01\xa8\xff", "Release Enter" },
+#else
+    { 0.0002, "\x00\x04\x41\x01\xff", "Enable autoload" },
 #endif
     
 #ifdef EVT_SDC_MOUNT 
@@ -172,6 +174,11 @@ void companion(void) {
 	cnt = -1;
 	cur++;
       } else {
+	//	static int last_clk = 0;
+	//if(!clk && last_clk) 
+	//  printf("%d %d %d $%02x %d\n", cur, byte, bit, cmds[cur].data[byte], (cmds[cur].data[byte] & (0x80>>bit))?1:0);
+	//last_clk = clk;
+	
 	// MODE 1: clock is idle low and data is sampled on the falling edge
 	tb->mcu_clk = clk;
 	tb->mcu_din = (cmds[cur].data[byte] & (0x80>>bit))?1:0;

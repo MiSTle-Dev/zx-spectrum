@@ -79,6 +79,19 @@ mcu_spi mcu (
   .mcu_sdc_din(sdc_data_out)
 );
 
+// the the tape auto loader can take over keyboard control and magically press keys
+reg kbd_autoloader_active = 1'b0;   
+   
+reg  kbd_toggle_autoloader;   
+wire kbd_toggle_hid;
+assign kbd_toggle = kbd_toggle_hid ^ kbd_toggle_autoloader;      
+
+reg [7:0] kbd_data_autoloader;
+wire [7:0] kbd_data_hid;
+assign kbd_data = kbd_autoloader_active?kbd_data_autoloader:kbd_data_hid;      
+
+
+   
 hid hid (
   .clk(clk),
   .reset(reset),
@@ -90,13 +103,16 @@ hid hid (
 
   .joystick(joystick),
 
-  .kbd_toggle(kbd_toggle),
-  .kbd_data(kbd_data)
+  .kbd_toggle(kbd_toggle_hid),
+  .kbd_data(kbd_data_hid)
 );
 
 wire sdc_int;   
 wire [7:0] int_ack;   
 wire sdc_iack = int_ack[3];
+
+// Tape autoload will magically press J, Ctrl-P, Ctrl-P, Enter on type insert
+wire	osd_tape_autoload;   
 
 sysctrl sysctrl (
   .clk(clk),
@@ -111,6 +127,7 @@ sysctrl sysctrl (
   // values controlled by the OSD
   .system_reset(osd_reset),
   .system_joystick_type(osd_joystick_type),
+  .system_tape_autoload(osd_tape_autoload),
   
   .int_out_n(mcu_intn),
   .int_in({ 4'b0000, sdc_int, 3'b000 }),
@@ -193,8 +210,40 @@ sd_card #(
     .outbyte(sd_data_byte)    // a byte of sector content
 );
 
+// --------------------------------------------------------------------------
 // ------------------------------- TAP player -------------------------------
+// --------------------------------------------------------------------------
 
+// The Zx Spectrum boots for about 2 seconds to the copyright message after powerup.
+// During this time it doesn't make much sense to start tape replay.
+
+reg [31:0] powerup_counter;
+reg	   tape_autoload_during_powerup;
+reg [23:0] tape_autoload_during_powerup_size;
+always @(posedge clk) begin
+   // run powerup counter for two seconds after powerup
+   if(reset) begin
+      powerup_counter <= 32'd0;
+      tape_autoload_during_powerup <= 1'b0;
+   end else if(powerup_counter < 32'd56_001_000) begin
+      // check for tape insertion during powerup and with
+      // autoload enabled
+      if(image_mounted && image_size != 24'd0 && osd_tape_autoload) begin
+	 tape_autoload_during_powerup <= 1'b1;
+	 tape_autoload_during_powerup_size <= image_size;	 
+      end
+
+     powerup_counter <= powerup_counter + 32'd1;
+   end
+end
+
+// device is still powering up
+wire powerup = powerup_counter < 32'd56_000_000;
+
+// trigger signal that fires if autoload was enabled and tape was inserted
+// during powerup
+wire tape_load_delayed_trigger = powerup_counter == 32'd56_000_999 && tape_autoload_during_powerup;
+   
 reg [7:0] tap_fifo_out_data;   
 reg       tap_fifo_out_strobe;   
    
@@ -415,7 +464,7 @@ always @(posedge clk) begin
       pulse_start_block <= 1'b0;
       
       // reset state on mount, to leave potential error state
-      if(image_mounted && image_size != 24'd0) 
+      if(image_mounted && image_size != 24'd0 && !powerup) 
 	tap_fifo_rd_state <= 0;
       
       // waiting for pulse engine to become idle?
@@ -503,18 +552,86 @@ always @(posedge clk) begin
    end else begin
       case(tap_fifo_wr_state) 
 	0: begin // wait for tap selection/insertion
-	   if(image_mounted && image_size != 24'd0) begin
+	   if(image_mounted && image_size != 24'd0 && powerup)
+	     $display("companion.v: TAP suppressing tape insertion during powerup");
+
+	   // check if a tape is inserted while powered up
+	   if(image_mounted && image_size != 24'd0 && !powerup) begin
+	      $display("companion.v: TAP image inserted");	      
 	      // user selected a tap file
 	      tap_len <= image_size;
+	   end
+	      
+	   // check if a tape has been inserted during powerup for autoload
+	   if(tape_load_delayed_trigger) begin
+	      $display("companion.v: TAP delayed autoload");	      
+	      tap_len <= tape_autoload_during_powerup_size;
+	   end
+	      
+	   if((image_mounted && image_size != 24'd0 && !powerup) || tape_load_delayed_trigger) begin
 	      tap_fifo_wr_state <= 1;
-	      tap_fifo_wr_delay <= 800;    // wait a little ...
+
+	      if(osd_tape_autoload) begin
+		 // autoload triggered: Send key events
+		 kbd_autoloader_active = 1'b1;   
+		 tap_fifo_wr_delay <= 32'd56_000_000;    // wait long enough to do all keyboard magic
+	      end else
+		tap_fifo_wr_delay <= 800;    // just wait a little ...
 	   end
 	end
-	
+
 	1: begin // delay
+	   if(kbd_autoloader_active) begin
+	      // press/release all keys with 100ms pause	      
+
+	      if(tap_fifo_wr_delay == 32'd56_000_000-0*32'd5_000_000) begin
+		 $display("companion.v: TAP press J");	
+		 kbd_data_autoloader <= 8'h0d; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-1*32'd5_000_000) begin
+		 $display("companion.v: TAP release J");	
+		 kbd_data_autoloader <= 8'h8d; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-2*32'd5_000_000) begin
+		 $display("companion.v: TAP press Ctrl");	
+		 kbd_data_autoloader <= 8'h68; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-3*32'd5_000_000) begin
+		 $display("companion.v: TAP press P");	
+		 kbd_data_autoloader <= 8'h13; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-4*32'd5_000_000) begin
+		 $display("companion.v: TAP release P");	
+		 kbd_data_autoloader <= 8'h93; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-5*32'd5_000_000) begin
+		 $display("companion.v: TAP press P");	
+		 kbd_data_autoloader <= 8'h13; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-6*32'd5_000_000) begin
+		 $display("companion.v: TAP release P");	
+		 kbd_data_autoloader <= 8'h93; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-7*32'd5_000_000) begin
+		 $display("companion.v: TAP release Ctrl");	
+		 kbd_data_autoloader <= 8'he8; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-8*32'd5_000_000) begin
+		 $display("companion.v: TAP press Enter");	
+		 kbd_data_autoloader <= 8'h28; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	      if(tap_fifo_wr_delay == 32'd56_000_000-9*32'd5_000_000) begin
+		 $display("companion.v: TAP release Enter");	
+		 kbd_data_autoloader <= 8'ha8; kbd_toggle_autoloader <= !kbd_toggle_autoloader;		 
+	      end
+	   end
+	   
 	   if(tap_fifo_wr_delay)
 	     tap_fifo_wr_delay <= tap_fifo_wr_delay - 1;
 	   else begin
+	      // Stop sending key events
+	      kbd_autoloader_active = 1'b0;   
+	      
 	      // prepare sector read
 	      tap_fifo_wr_state <= 2;
 	      sd_sector <= 32'd0;	
