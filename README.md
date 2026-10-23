@@ -20,3 +20,6 @@ To load a game from a TAP file do the following:
   - The file should load
   - If needed, type ```R``` to run the program
 
+## Tape auto loading
+
+The core has a menu option to allow auto loading. Enabling this will automatically type the load command once a tape file is selected. Together with the ability to save the selected tape file in the settings, it's possible to have fully automatic tape loading after power-up.
