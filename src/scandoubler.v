@@ -87,9 +87,9 @@ always @(posedge clk_sys) begin
 
 		// if no scanlines or not a scanline
 		if(!scanline || !scanlines) begin
-			r_out <= {r, 2'b00 };
-			g_out <= {g, 2'b00 };
-			b_out <= {b, 2'b00 };
+			r_out <= {r, r[2:1] };
+			g_out <= {g, g[2:1] };
+			b_out <= {b, b[2:1] };
 		end else begin
 			case(scanlines)
 				1: begin // reduce 25% = 1/2 + 1/4

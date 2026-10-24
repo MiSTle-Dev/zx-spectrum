@@ -23,12 +23,12 @@ module companion (
     // OSD overlay
     input	 hs_n,
     input	 vs_n, 
-    input [5:0]	 red,
-    input [5:0]	 green,
-    input [5:0]	 blue, 
-    output [5:0] out_red,
-    output [5:0] out_green,
-    output [5:0] out_blue,
+    input [4:0]	 red,
+    input [4:0]	 green,
+    input [4:0]	 blue, 
+    output [4:0] out_red,
+    output [4:0] out_green,
+    output [4:0] out_blue,
 
     // OSD controlled variables
     output	 osd_reset,
