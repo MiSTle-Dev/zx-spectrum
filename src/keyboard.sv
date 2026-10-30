@@ -155,7 +155,7 @@ always @(posedge clk_sys) begin
 
 			7'h2c : keys[7][0] <= release_btn; // SPACE
 			7'h68 : keys[7][1] <= release_btn; // CTRL (Symbol Shift)
-			7'h11 : keys[7][2] <= release_btn; // M
+			7'h10 : keys[7][2] <= release_btn; // M
 			7'h11 : keys[7][3] <= release_btn; // N
 			7'h05 : keys[7][4] <= release_btn; // B
 `ifdef DISABLED
