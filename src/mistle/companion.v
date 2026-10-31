@@ -4,6 +4,8 @@ module companion (
     input	 clk,
     input	 reset,
 
+    input [1:0]	 buttons,
+		  
     // FPGA Companion
     input	 mcu_din,
     output	 mcu_dout,
@@ -19,6 +21,8 @@ module companion (
 
     // tape data
     output	 tap,
+
+    output	 ws2812,
 		  
     // OSD overlay
     input	 hs_n,
@@ -114,6 +118,15 @@ wire sdc_iack = int_ack[3];
 // Tape autoload will magically press J, Ctrl-P, Ctrl-P, Enter on type insert
 wire	osd_tape_autoload;   
 
+// connect to ws2812 led
+wire [23:0] ws2812_color;
+ws2812 #(.CLK_FRE(28350000)) ws2812_inst (
+    .clk(clk),
+    .color(ws2812_color),
+    .data(ws2812)
+);
+
+   
 sysctrl sysctrl (
   .clk(clk),
   .reset(reset),
@@ -133,8 +146,8 @@ sysctrl sysctrl (
   .int_in({ 4'b0000, sdc_int, 3'b000 }),
   .int_ack( int_ack ),
   
-  .buttons( 2'b00 ),
-  .color()
+  .buttons( buttons ),
+  .color(ws2812_color)
 );
 
 osd_u8g2 osd_u8g2 (

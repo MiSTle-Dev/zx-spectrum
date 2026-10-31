@@ -37,7 +37,7 @@ SRCS = config.vh $D/zxspectrum.sv $D/ula.sv $D/keyboard.sv $D/sdram.sv $D/scando
 
 # include mistle/FPGA companion related files
 SRCS += $D/mistle/companion.v $D/mistle/mcu_spi.v $D/mistle/hid.v $D/mistle/sysctrl.v $D/mistle/osd_u8g2.v
-SRCS += $D/mistle/sd_card.v $D/mistle/sd_rw.v $D/mistle/sdcmd_ctrl.v 
+SRCS += $D/mistle/sd_card.v $D/mistle/sd_rw.v $D/mistle/sdcmd_ctrl.v  $D/mistle/ws2812.v
 
 # Optional compile-time default; at runtime use: ./Vsnestang_top -r roms/game.hex
 ifneq ($(ROM_FILE),)

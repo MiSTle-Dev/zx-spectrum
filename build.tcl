@@ -1,5 +1,5 @@
 if {$argc == 0} {
-    puts "Usage: $argv0 <device> [<controller>]"
+    puts "Usage: $argv0 <device>"
     puts "          device: nano20k"
     exit 1
 }
@@ -14,6 +14,7 @@ if {$dev eq "nano20k"} {
     add_file -type cst "src/nano20k/zxspectrum.cst"
     add_file -type sdc "src/nano20k/zxspectrum.sdc"
     set_option -output_base_name zxspectrum_${dev}
+    set_option -loading_rate 25.000
 } else {
     error "Unknown device $dev"
 }
@@ -39,6 +40,7 @@ add_file -type verilog "src/mistle/osd_u8g2.v"
 add_file -type verilog "src/mistle/sd_card.v"
 add_file -type verilog "src/mistle/sd_rw.v"
 add_file -type verilog "src/mistle/sdcmd_ctrl.v"
+add_file -type verilog "src/mistle/ws2812.v"
 
 add_file -type verilog "src/hdmi/audio_clock_regeneration_packet.sv"
 add_file -type verilog "src/hdmi/audio_info_frame.sv"

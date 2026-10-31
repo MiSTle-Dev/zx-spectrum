@@ -77,7 +77,8 @@ module zxspectrum
    output	 sd_clk,
    inout	 sd_cmd,	// MOSI
    inout [3:0]	 sd_dat,	// 0: MISO
-           
+
+   output	 ws2812,
  
    // hdmi/tdms
    output	 tmds_clk_n,
@@ -369,7 +370,6 @@ wire  [7:0] joystick;    // digital joystick data sent from companion
 wire  [7:0] joy0 = osd_joystick_type?joystick:8'h00; // Kempston
 wire  [7:0] joy1 = osd_joystick_type?8'h00:joystick; // Sinclair Interface II
    
-wire  [1:0] buttons;
 wire  [1:0] switches;
 wire        scandoubler_disable;
 wire        ypbpr;
@@ -508,7 +508,7 @@ always @(posedge clk_sys) begin
 
 	old_F11 <= Fn[11];
 
-	reset <= buttons[1] | status[0] | cold_reset | warm_reset | shdw_reset | Fn[10] | osd_reset;
+	reset <= status[0] | cold_reset | warm_reset | shdw_reset | Fn[10] | osd_reset;
 
 	if(reset | ~Fn[11]) NMI <= 0;
 	else if(~old_F11 & Fn[11] & (mod[2:1] == 0)) NMI <= 1;
@@ -1015,6 +1015,8 @@ companion companion (
     .clk(clk_sys), 
     .reset(!locked),
 
+    .buttons({s[0],s[1]}),
+		     
     // Companion SPI interface
     .mcu_din(mcu_din),
     .mcu_dout(mcu_dout),
@@ -1023,6 +1025,8 @@ companion companion (
     .mcu_intn(mcu_intn),
     .mcu_spare(mcu_spare),
 
+    .ws2812(ws2812),
+		     
     .sd_clk(sd_clk),
     .sd_cmd(sd_cmd),
     .sd_dat(sd_dat),
