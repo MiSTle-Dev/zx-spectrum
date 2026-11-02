@@ -1,7 +1,9 @@
-//Copyright (C)2014-2023 GOWIN Semiconductor Corporation.
-//All rights reserved.
-//File Title: Timing Constraints file
-//GOWIN Version: 1.9.9 Beta-4
-//Created Time: 2023-09-22 09:53:28
-create_clock -name clk_hdmi -period 7.1 -waveform {0 3.55} [get_nets {clk_pixel_x5}] -add
-// create_clock -name clk_sys -period 8.8 -waveform {0 4.4} [get_nets {clk_sys}] -add
+// Nano20K: 27 MHz * 21 / 4 = 141.750 MHz; CLKDIV /5 = 28.350 MHz.
+create_clock -name clk_osc -period 37.037037 [get_ports {CLOCK_27}]
+create_clock -name clk_companion -period 50 [get_ports {mcu_clk}]
+create_generated_clock -name clk_hdmi -source [get_ports {CLOCK_27}] -multiply_by 21 -divide_by 4 [get_nets {clk_pixel_x5}]
+create_generated_clock -name clk_sys -source [get_nets {clk_pixel_x5}] -divide_by 5 [get_pins {clkdiv_inst/CLKOUT}]
+create_generated_clock -name clk_sdram -source [get_pins {clkdiv_inst/CLKOUT}] -divide_by 1 -invert [get_ports {O_sdram_clk}]
+create_clock -name clk_audio -period 20833.333 [get_nets {clk_audio}]
+// External SPI and fractional audio use the existing ready/toggle handshakes.
+set_clock_groups -asynchronous -group [get_clocks {clk_companion}] -group [get_clocks {clk_osc clk_hdmi clk_sys clk_sdram}] -group [get_clocks {clk_audio}]
