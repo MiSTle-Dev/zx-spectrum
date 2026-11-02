@@ -275,6 +275,7 @@ assign SDRAM_CLK = !clk_sys;
 // SDRAM initialization depends only on PLL lock. Button/OSD resets leave
 // the memory controller running, including refresh and any pending access.
 reg [1:0] sdram_reset_sync = 0;
+
 always @(posedge clk_sys or negedge pll_locked) begin
 	if (!pll_locked) sdram_reset_sync <= 0;
 	else sdram_reset_sync <= {sdram_reset_sync[0], 1'b1};
@@ -480,9 +481,6 @@ wire  [7:0] reg_A   = cpu_reg[7:0];
 
 assign leds[1] = reset;
 
-
-
-
 T80pa cpu
 (
 	.RESET_n(~reset),
@@ -610,6 +608,7 @@ always @(posedge clk_sys)
 // On MiST and MiSTer rom was placed in SDRAM. Here it's in bsram and is thus
 // mapped into the sdram output
 wire [15:0] sdram_dout_int;
+
 assign sdram_dout = (addr[15:14] == 2'b00)?
 		    { bsrom_dout, bsrom_dout }:
 		    sdram_dout_int;   

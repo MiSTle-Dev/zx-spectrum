@@ -10,11 +10,11 @@
 
 ## Build, Test, and Development Commands
 
-Use **Gowin V1.9.12.03**, locally selected by `~/bin/gowin_wrap_old`. V1.9.12.04 built successfully but produced a black Spectrum screen on hardware. Run from the repository root:
+Use **Gowin V1.9.12.03** if available. V1.9.12.04 built successfully but produced a black Spectrum screen on hardware. Run from the repository root:
 
 ```sh
-~/bin/gowin_wrap_old gw_sh build.tcl nano20k
-~/bin/gowin_wrap_old gw_sh build.tcl gw5a_25
+gw_sh build.tcl nano20k
+gw_sh build.tcl gw5a_25
 ```
 
 Bitstreams appear at `impl/pnr/zxspectrum_<board>.fs`. `./build.sh <board>` requires the working `gw_sh` and `grc` on PATH.
