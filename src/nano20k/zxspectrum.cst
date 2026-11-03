@@ -64,3 +64,15 @@ IO_PORT "sd_dat[3]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
 //
 // NO SDRAM ports necessary, they are connected through the "magical" port names of the top module
 //
+
+// Alternative connection to the on-board BL616 (same pins as NanoMig).
+IO_LOC "spi_csn" 86;
+IO_PORT "spi_csn" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "spi_sclk" 13;
+IO_PORT "spi_sclk" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "spi_dat" 76;
+IO_PORT "spi_dat" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "spi_dir" 75;
+IO_PORT "spi_dir" PULL_MODE=NONE DRIVE=8 IO_TYPE=LVCMOS33;
+IO_LOC "spi_irqn" 69;
+IO_PORT "spi_irqn" PULL_MODE=NONE DRIVE=8 IO_TYPE=LVCMOS33;

@@ -138,3 +138,15 @@ obj_dir/boot/Vboot_tb: $(BOOT_SRCS) Makefile
 	verilator --binary --timing -Wno-fatal --top-module boot_tb --Mdir $(abspath obj_dir/boot) -j 4 $(BOOT_SRCS)
 	cp $D/roms/48_rom.hex obj_dir/boot/roms/
 	cp $D/mistle/zxspectrum_xml.hex obj_dir/boot/
+
+# NanoMig-compatible on-board BL616 / external M0S selection and SPI exchange.
+NANO_SPI_SRCS = $D/nano20k/config.vh nano20k_spi_tb.sv $(filter %.sv %.v,$(SRCS))
+.PHONY: spi-check
+spi-check: obj_dir/spi/Vnano20k_spi_tb
+	cd obj_dir/spi && ./Vnano20k_spi_tb
+
+obj_dir/spi/Vnano20k_spi_tb: $(NANO_SPI_SRCS) Makefile
+	mkdir -p obj_dir/spi/roms
+	verilator --binary --timing -Wno-fatal --top-module nano20k_spi_tb --Mdir $(abspath obj_dir/spi) -j 4 $(NANO_SPI_SRCS)
+	cp $D/roms/48_rom.hex obj_dir/spi/roms/
+	cp $D/mistle/zxspectrum_xml.hex obj_dir/spi/
