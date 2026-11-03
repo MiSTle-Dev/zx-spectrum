@@ -80,26 +80,26 @@ assign mcu_alt_dout = mcu_dout;
 // by default the alternate mcu is being used. Once there is
 // a select from the main mcu, then the connection is
 // being switched
-reg mcu_main;
+reg mcu_active_main;
 always @(posedge clk) begin
     if(reset)
-        mcu_main = 1'b0;
+        mcu_active_main = 1'b0;
     else begin
-        // mcu_main is de-activated once the regulatar/external companion 
+        // mcu_active_main is activated once the regulatar/external companion 
         // drives ss low. This means that the external companion
         // is connected and the FPGA switches its inputs to the
         // main ones. Until then the inputs of the alternate companion are
         // being used.
         if(mcu_ss == 1'b0)
-            mcu_main = 1'b1;
+            mcu_active_main = 1'b1;
     end
 end
 
 // switch between internal SPI connected to the on-board bl616
 // or to the external one possibly connected to a M0S Dock
-wire mcu_active_din = mcu_main?mcu_din:mcu_alt_din;
-wire mcu_active_ss = mcu_main?mcu_ss:mcu_alt_ss;
-wire mcu_active_clk = mcu_main?mcu_clk:mcu_alt_clk;
+wire mcu_active_din = mcu_active_main?mcu_din:mcu_alt_din;
+wire mcu_active_ss = mcu_active_main?mcu_ss:mcu_alt_ss;
+wire mcu_active_clk = mcu_active_main?mcu_clk:mcu_alt_clk;
 `endif
 
    

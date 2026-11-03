@@ -80,14 +80,6 @@ module zxspectrum
    input	 mcu_ss,
    output	 mcu_intn,
    input	 mcu_spare,
-`ifdef NANO
-   // Alternative SPI connection to the on-board BL616.
-   input     spi_sclk,
-   input     spi_csn,
-   input     spi_dat,
-   output    spi_dir,
-   output    spi_irqn,
-`endif
 
    // SD card slot
    output	 sd_clk,
@@ -1096,29 +1088,6 @@ wire [4:0] osd_out_r /* verilator public */;
 wire [4:0] osd_out_g /* verilator public */;
 wire [4:0] osd_out_b /* verilator public */;
 
-// NanoMig-compatible selection: start on-board, latch external on its CS.
-wire spi_io_din, spi_io_ss;
-wire spi_io_clk /* synthesis syn_keep=1 */;
-
-`ifdef NANO
-reg spi_ext = 1'b0;
-
-always @(posedge clk_sys or negedge system_reset_n) begin
-    if (!system_reset_n) spi_ext <= 1'b0;
-    else if (!mcu_ss) spi_ext <= 1'b1;
-end
-
-assign spi_io_din = spi_ext ? mcu_din : spi_dat;
-assign spi_io_clk = spi_ext ? mcu_clk : spi_sclk;
-assign spi_io_ss = spi_ext ? mcu_ss : spi_csn;
-assign spi_dir = mcu_dout;
-assign spi_irqn = mcu_intn;
-`else
-assign spi_io_din = mcu_din;
-assign spi_io_clk = mcu_clk;
-assign spi_io_ss = mcu_ss;
-`endif
-
 companion companion (
     .clk(clk_sys), 
     .reset(!system_reset_n),
@@ -1126,10 +1095,10 @@ companion companion (
     .buttons({s[0],s[1]}),
 		     
     // Companion SPI interface
-    .mcu_din(spi_io_din),
+    .mcu_din(mcu_din),
     .mcu_dout(mcu_dout),
-    .mcu_clk(spi_io_clk),
-    .mcu_ss(spi_io_ss),
+    .mcu_clk(mcu_clk),
+    .mcu_ss(mcu_ss),
     .mcu_intn(mcu_intn),
     .mcu_spare(mcu_spare),
 
