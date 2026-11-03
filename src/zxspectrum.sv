@@ -22,22 +22,20 @@
 //  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //============================================================================
 
-//
-// TODO/Remarks:
-// - RAM on Nano os 2M*32, we currently use only 16bits. The zxspectrum actually
-//   only uses 2M*16 for various RAM variants. It uses other parts for zx rom,
-//   tape and gs roms. These are not fully ported to the nano and will not work
-//   in the current state. TODO: Use all 32 bits and properly handle sdram row
-//   and address widths
-//
-
+// Nano20K uses the lower 16 bits of its 32-bit SDRAM; GW5A uses a 16-bit bus.
+// Both boards share the 48K core and an embedded Spectrum ROM.
 
 module zxspectrum
 (
+`ifdef GW5A_25
+   input	 CLOCK_50,	// Input clock 50 MHz
+   input	 reset_btn,	// KEY0, active high
+   input	 user_n,	// KEY1, active low
+`else
    input	 CLOCK_27,	// Input clock 27 MHz
-
-   output [5:0]	 leds_n,
    input [1:0]	 s,
+`endif
+   output [5:0]	 leds_n,
 
 `ifdef NANO
    // "Magic" port names that the gowin compiler connects to the on-chip SDRAM
@@ -52,7 +50,7 @@ module zxspectrum
    output [1:0]	 O_sdram_ba,	// two banks
    output [3:0]	 O_sdram_dqm,	// 32/4
 `else
-   output [12:0] SDRAM_A,
+   output [`SDRAM_ROW_WIDTH-1:0] SDRAM_A,
    inout [15:0]	 SDRAM_DQ, 
    output	 SDRAM_DQML,
    output	 SDRAM_DQMH,
@@ -62,7 +60,9 @@ module zxspectrum
    output	 SDRAM_nCS,
    output [1:0]	 SDRAM_BA,
    output	 SDRAM_CLK,
+`ifndef GW5A_25
    output	 SDRAM_CKE,
+`endif
 `endif
 
    // FPGA Companion
@@ -88,16 +88,22 @@ module zxspectrum
 );
 // `default_nettype none
 
+`ifdef GW5A_25
+wire [1:0] s = {reset_btn, !user_n};
+wire SDRAM_CKE; // CKE is tied high on the GW5A board
+`endif
+
 wire [5:0] leds;
 assign leds_n = ~leds;   
    
 `ifdef NANO
 wire [`SDRAM_ROW_WIDTH-1:0] SDRAM_A;
 assign O_sdram_addr = SDRAM_A;
-wire [15:0] SDRAM_DQ;   
-assign IO_sdram_dq = { 16'h0000, SDRAM_DQ };
+// Connect the controller directly to the lower physical DQ pins below.
+// Mask the unused upper half of the Nano20K's 32-bit SDRAM.
+assign IO_sdram_dq[31:16] = 16'hzzzz;
 wire	 SDRAM_DQML, SDRAM_DQMH;
-assign O_sdram_dqm = { 2'b00, SDRAM_DQMH, SDRAM_DQML };
+assign O_sdram_dqm = { 2'b11, SDRAM_DQMH, SDRAM_DQML };
 wire	 SDRAM_nWE;
 assign O_sdram_wen_n = SDRAM_nWE;
 wire	 SDRAM_nCAS;
@@ -141,7 +147,10 @@ import "DPI-C" function void display_simtime();
 `endif
    
 ////////////////////   CLOCKS   ///////////////////
-wire locked;
+wire pll_locked;
+wire sdram_ready;
+wire sdram_reset_n;
+wire system_reset_n;
 wire clk_sys;
 wire clk_pixel;      
 
@@ -151,15 +160,20 @@ wire clk_pixel;
    
 `ifdef VERILATOR
 // ------------------- clock simulation --------------------
+`ifdef GW5A_25
+assign clk_sys = CLOCK_50;
+assign SDRAM_CLK = CLOCK_50;
+`else
 assign clk_sys = CLOCK_27;
-assign SDRAM_CLK = CLOCK_27;   
+assign SDRAM_CLK = CLOCK_27;
+`endif
 
 reg [5:0] lock_cnt;
  always @(posedge clk_sys)
   if(lock_cnt != 6'd63)
     lock_cnt <= lock_cnt + 6'd1;   
 
-assign locked = lock_cnt == 6'd63;   
+assign pll_locked = lock_cnt == 6'd63;
 
 `ifdef SYS_CLK_28MHZ
    assign clk_pixel = clk_sys;   // 28
@@ -183,16 +197,25 @@ assign locked = lock_cnt == 6'd63;
 // ------------------- hardware plls --------------------
 wire  clk_pixel_x5;
 
-// This currently only supports the GW2AR-LV18 (e.g. Tang Nano 20k)
-// The HDMI is clocked at 141 MHz (28 * 5) and the system clock
-// is 28 MHz. No turbo or extended RAM/ROM modes are supported/enabled
+// Both boards retain one system/pixel clock and a /5 HDMI clock divider.
+// Nano20K: 27 MHz -> 141.750 MHz -> 28.350 MHz.
+// GW5A-25: 50 MHz -> 141.666667 MHz -> 28.333333 MHz.
 `ifndef SYS_CLK_28MHZ
    Error HW is currently only supported at 28Mhz
 `endif
 
+`ifdef GW5A_25
+// NanoMig GW5A-25 PLL, including its vendor PLL_INIT sequence.
+pll_142m pll_hdmi (
+    .clkout0(clk_pixel_x5),
+    .clkin(CLOCK_50),
+    .mdclk(CLOCK_50),
+    .lock(pll_locked)
+);
+`else
 rPLL rpll_inst (
     .CLKOUT(clk_pixel_x5),
-    .LOCK(locked),
+    .LOCK(pll_locked),
     .CLKOUTP(),
     .CLKOUTD(),
     .CLKOUTD3(),
@@ -230,21 +253,45 @@ defparam rpll_inst.DYN_SDIV_SEL = 2;
 defparam rpll_inst.CLKOUTD_SRC = "CLKOUT";
 defparam rpll_inst.CLKOUTD3_SRC = "CLKOUT";
 defparam rpll_inst.DEVICE = "GW2AR-18C";
+`endif
 
 CLKDIV clkdiv_inst (
     .CLKOUT(clk_sys),
     .HCLKIN(clk_pixel_x5),
-    .RESETN(locked),
+    .RESETN(pll_locked),
     .CALIB(1'b0)
 );
 
 defparam clkdiv_inst.DIV_MODE = "5";
+`ifndef GW5A_25
 defparam clkdiv_inst.GSREN = "false";
+`endif
 
 assign clk_pixel = clk_sys;
 assign SDRAM_CLK = !clk_sys; 
    
-`endif // !`ifdef VERILATOR   
+`endif // !`ifdef VERILATOR
+
+// SDRAM initialization depends only on PLL lock. Button/OSD resets leave
+// the memory controller running, including refresh and any pending access.
+reg [1:0] sdram_reset_sync = 0;
+
+always @(posedge clk_sys or negedge pll_locked) begin
+	if (!pll_locked) sdram_reset_sync <= 0;
+	else sdram_reset_sync <= {sdram_reset_sync[0], 1'b1};
+end
+
+assign sdram_reset_n = sdram_reset_sync[1];
+
+// PLL loss asserts system reset asynchronously. SDRAM ready is sampled
+// synchronously, so its changes never enter an asynchronous reset input.
+reg [1:0] system_reset_sync = 0;
+always @(posedge clk_sys or negedge pll_locked) begin
+	if (!pll_locked) system_reset_sync <= 0;
+	else system_reset_sync <= {system_reset_sync[0], sdram_ready};
+end
+
+assign system_reset_n = system_reset_sync[1];
 
 wire kbd_toggle;
 wire [7:0] kbd_data;      
@@ -486,7 +533,7 @@ always_comb begin
 	endcase
 end
 
-wire init_reset = !locked || s[1];
+wire init_reset = !system_reset_n || s[1];
 
 reg  NMI;
 reg  reset;
@@ -561,14 +608,38 @@ always @(posedge clk_sys)
 // On MiST and MiSTer rom was placed in SDRAM. Here it's in bsram and is thus
 // mapped into the sdram output
 wire [15:0] sdram_dout_int;
+
 assign sdram_dout = (addr[15:14] == 2'b00)?
 		    { bsrom_dout, bsrom_dout }:
 		    sdram_dout_int;   
 
-sdram ram
+// Refresh every 7.06 us or less at either board's approximately 28 MHz clock.
+// Wait at least 200 us before the SDRAM initialization command sequence.
+`ifdef ENABLE_GS
+   "FIX ME!" // The SDRAM refresh workaround does not support General Sound.
+`endif
+sdram #(
+    .ROW_WIDTH(`SDRAM_ROW_WIDTH),
+`ifdef NANO
+    .COLUMN_BITS(8),
+`else
+    .COLUMN_BITS(9),
+`endif
+`ifdef SYS_CLK_28MHZ
+    .RASCAS_DELAY(3'd2),
+`else
+    .RASCAS_DELAY(3'd3),
+`endif
+    .REFRESH_CYCLES(200),
+    .STARTUP_CYCLES(5670)
+) ram
 (
+`ifdef NANO
+    .SDRAM_DQ(IO_sdram_dq[15:0]),
+`endif
 	.*,
-	.init_n(locked),
+	.init_n(sdram_reset_n),
+	.ready(sdram_ready),
 	.clk(clk_sys),
 `ifdef SYS_CLK_28MHZ
 	.clkref(ce_cpu_n),
@@ -579,7 +650,6 @@ sdram ram
 	.clkref(ce_14m),
   `endif
 `endif
-
 	// port1 is CPU/tape
 	.port1_req(sdram_req),
 	.port1_a(sdram_addr[23:1]),
@@ -609,7 +679,6 @@ sdram ram
 `endif
 );
 
-assign SDRAM_CKE = 1;
    
 // CPU/tape port control
 reg  [24:0] sdram_addr;
@@ -1013,7 +1082,7 @@ wire [4:0] osd_out_b /* verilator public */;
 
 companion companion (
     .clk(clk_sys), 
-    .reset(!locked),
+    .reset(!system_reset_n),
 
     .buttons({s[0],s[1]}),
 		     
@@ -1062,19 +1131,31 @@ video_analyzer video_analyzer (
 );
  
 `ifndef VERILATOR
-parameter          PIXEL_CLOCK = 28_375_200;   
+`ifdef GW5A_25
+parameter          PIXEL_CLOCK = 28_333_333;
+`else
+parameter          PIXEL_CLOCK = 28_350_000;
+`endif
 
 /* -------------------- HDMI video and audio -------------------- */
 
-// generate 48khz audio clock
-reg clk_audio;
-reg [8:0] aclk_cnt;
+// Fractional divider: average 48 kHz, with at most one pixel of jitter.
+// The Nano20K nine-bit integer divider cannot count the required 295 clocks.
+// Keep a named clock register for the SDC (otherwise Gowin merges it with
+// audio_phase[0], which toggles on the same fractional-divider overflow).
+reg clk_audio /* synthesis syn_keep=1 syn_preserve=1 */ = 0;
+localparam integer AUDIO_STEP = 2 * 48000;
+localparam integer AUDIO_PHASE_WIDTH = $clog2(PIXEL_CLOCK + AUDIO_STEP);
+reg [AUDIO_PHASE_WIDTH-1:0] audio_phase = 0;
 always @(posedge clk_pixel) begin
-    if(aclk_cnt < PIXEL_CLOCK / 48000 / 2 -1)
-        aclk_cnt <= aclk_cnt + 9'd1;
-    else begin
-        aclk_cnt <= 9'd0;
+    if (!system_reset_n) begin
+        audio_phase <= 0;
+        clk_audio <= 0;
+    end else if (audio_phase >= PIXEL_CLOCK - AUDIO_STEP) begin
+        audio_phase <= audio_phase + AUDIO_STEP - PIXEL_CLOCK;
         clk_audio <= ~clk_audio;
+    end else begin
+        audio_phase <= audio_phase + AUDIO_STEP;
     end
 end
 

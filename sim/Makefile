@@ -126,3 +126,15 @@ audio:
 
 clean:
 	rm -rf obj_dir
+
+# Headless ROM boot with a clocked SDRAM model; exercises the shared core.
+BOOT_SRCS = $D/gw5a_25/config.vh boot_tb.sv $(filter %.sv %.v,$(SRCS))
+.PHONY: boot-check
+boot-check: obj_dir/boot/Vboot_tb
+	cd obj_dir/boot && ./Vboot_tb
+
+obj_dir/boot/Vboot_tb: $(BOOT_SRCS) Makefile
+	mkdir -p obj_dir/boot/roms
+	verilator --binary --timing -Wno-fatal --top-module boot_tb --Mdir $(abspath obj_dir/boot) -j 4 $(BOOT_SRCS)
+	cp $D/roms/48_rom.hex obj_dir/boot/roms/
+	cp $D/mistle/zxspectrum_xml.hex obj_dir/boot/

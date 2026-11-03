@@ -1,6 +1,6 @@
-if {$argc == 0} {
+if {$argc != 1} {
     puts "Usage: $argv0 <device>"
-    puts "          device: nano20k"
+    puts "          device: nano20k, gw5a_25"
     exit 1
 }
 
@@ -10,14 +10,26 @@ set dev [lindex $argv 0]
 if {$dev eq "nano20k"} {
     set_device GW2AR-LV18QN88C8/I7 -device_version C
     add_file "src/nano20k/config.vh"
-    add_file -type verilog "src/zxspectrum.sv"
     add_file -type cst "src/nano20k/zxspectrum.cst"
     add_file -type sdc "src/nano20k/zxspectrum.sdc"
     set_option -output_base_name zxspectrum_${dev}
     set_option -loading_rate 25.000
+} elseif {$dev eq "gw5a_25"} {
+    set_device GW5A-LV25LQ144C1/I0 -name GW5A-25A
+    add_file "src/gw5a_25/config.vh"
+    add_file -type verilog "src/gw5a_25/pll_142m.v"
+    add_file -type verilog "src/gw5a_25/pll_142m_mod.v"
+    add_file -type verilog "src/gw5a_25/pll_init.v"
+    add_file -type cst "src/gw5a_25/zxspectrum.cst"
+    add_file -type sdc "src/gw5a_25/zxspectrum.sdc"
+    set_option -output_base_name zxspectrum_${dev}
+    set_option -loading_rate 70.000
+    set_option -cst_warn_to_error 1
 } else {
     error "Unknown device $dev"
 }
+
+add_file -type verilog "src/zxspectrum.sv"
 
 add_file -type vhdl "src/T80/T80pa.vhd"
 add_file -type vhdl "src/T80/T80.vhd"
@@ -64,6 +76,11 @@ set_option -use_ready_as_gpio 0
 set_option -use_done_as_gpio 0
 set_option -use_i2c_as_gpio 1
 set_option -use_cpu_as_gpio 1
-set_option -multi_boot 1
+if {$dev eq "gw5a_25"} {
+    set_option -multi_boot 0
+    set_option -mspi_jump 0
+} else {
+    set_option -multi_boot 1
+}
 
 run all

@@ -21,11 +21,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 //
 
-module sdram (
+module sdram #(
+    parameter integer ROW_WIDTH = 13,
+    parameter integer COLUMN_BITS = 9,
+    parameter [2:0] RASCAS_DELAY = 3'd2,
+    parameter integer REFRESH_CYCLES = 200,
+    parameter integer STARTUP_CYCLES = 0
+) (
 
 	// interface to the MT48LC16M16 chip
 	inout      [15:0] SDRAM_DQ,   // 16 bit bidirectional data bus
-	output reg [`SDRAM_ROW_WIDTH-1:0] SDRAM_A,    // multiplexed address bus
+	output reg [ROW_WIDTH-1:0] SDRAM_A,    // multiplexed address bus
+	output reg        SDRAM_CKE,  // clock enable
 	output reg        SDRAM_DQML, // two byte masks
 	output reg        SDRAM_DQMH, // two byte masks
 	output reg [1:0]  SDRAM_BA,   // two banks
@@ -35,6 +42,7 @@ module sdram (
 	output            SDRAM_nCAS, // columns address select
 
 	// cpu/chipset interface
+	output            ready,      // initialization completed
 	input             init_n,     // init signal after FPGA config to initialize RAM
 	input             clk,        // sdram clock
 	input             clkref,
@@ -56,14 +64,20 @@ module sdram (
 	output     [15:0] port2_q
 );
 
+// Bank address bits follow the column and row address bits.
+localparam integer BANK_LSB = COLUMN_BITS + ROW_WIDTH + 1;
+
 reg [15:0] SDRAM_DQ_R;   // 16 bit bidirectional data bus
 assign SDRAM_DQ = SDRAM_DQ_R;   
 
-`ifdef SYS_CLK_28MHZ
-localparam RASCAS_DELAY   = 3'd2;   // tRCD=20ns -> 2 cycles@<=100MHz, 3 cycles@>100MHz
-`else
-localparam RASCAS_DELAY   = 3'd3;   // tRCD=20ns -> 2 cycles@<=100MHz, 3 cycles@>100MHz
-`endif
+initial SDRAM_CKE = 1'b0;
+always @(posedge clk or negedge init_n) begin
+    if (!init_n) SDRAM_CKE <= 1'b0;
+    else SDRAM_CKE <= 1'b1;
+end
+
+
+
 localparam BURST_LENGTH   = 3'b000; // 000=1, 001=2, 010=4, 011=8
 localparam ACCESS_TYPE    = 1'b0;   // 0=sequential, 1=interleaved
 localparam CAS_LATENCY    = 3'd3;   // 2/3 allowed
@@ -72,8 +86,8 @@ localparam NO_WRITE_BURST = 1'b1;   // 0= write burst enabled, 1=only single acc
 
 localparam MODE = { 3'b000, NO_WRITE_BURST, OP_MODE, CAS_LATENCY, ACCESS_TYPE, BURST_LENGTH}; 
 
-// 64ms/8192 rows = 7.8us -> 842 cycles@108MHz
-localparam RFRSH_CYCLES = 10'd842;
+// 64ms/8192 rows = 7.8us; 200 cycles is conservative at 28.333/28.350 MHz.
+localparam RFRSH_CYCLES = REFRESH_CYCLES;
 
 // ---------------------------------------------------------------------
 // ------------------------ cycle state machine ------------------------
@@ -99,8 +113,11 @@ localparam STATE_CAS0      = STATE_RAS0 + RASCAS_DELAY; // CAS phase - 3
 localparam STATE_DS0       = STATE_RAS0 + RASCAS_DELAY + 1'd1; // 2 cycles before data required
 localparam STATE_CAS1      = STATE_RAS1 + RASCAS_DELAY; // CAS phase - 5
 localparam STATE_DS1       = STATE_RAS1 + RASCAS_DELAY + 1'd1; // 2 cycles before data required
-localparam STATE_READ0     = 3'd0; //STATE_CAS0 + CAS_LATENCY + 1'd1;
-localparam STATE_READ1     = 3'd1 + 3'd1;
+// Commands reach SDRAM on the falling system-clock edge. CL3 data is
+// sampled into sd_din on the next rising edge, then consumed one edge later.
+// Keep the capture phases tied to CAS timing (the 3-bit state wraps at eight).
+localparam [2:0] STATE_READ0 = STATE_CAS0 + CAS_LATENCY + 3'd2;
+localparam [2:0] STATE_READ1 = STATE_CAS1 + CAS_LATENCY + 3'd2;
 localparam STATE_LAST      = 3'd7;
 
 reg [2:0] t;
@@ -116,12 +133,20 @@ end
 // --------------------------- startup/reset ---------------------------
 // ---------------------------------------------------------------------
 
-// wait 1ms (32 8Mhz cycles) after FPGA config is done before going
-// into normal operation. Initialize the ram in the last 16 reset cycles (cycles 15-0)
+// Wait STARTUP_CYCLES after PLL lock, then issue precharge, two refreshes,
+// and mode-register load before accepting normal accesses.
 reg [4:0]  reset;
 reg        init = 1'b1;
+assign ready = init_n && !init;
+localparam STARTUP_WIDTH = (STARTUP_CYCLES > 0) ? $clog2(STARTUP_CYCLES + 1) : 1;
+reg [STARTUP_WIDTH-1:0] startup_count = STARTUP_CYCLES;
 always @(posedge clk, negedge init_n) begin
 	if(!init_n) begin
+		startup_count <= STARTUP_CYCLES;
+		reset <= 5'h1f;
+		init <= 1'b1;
+	end else if (startup_count != 0) begin
+		startup_count <= startup_count - 1'b1;
 		reset <= 5'h1f;
 		init <= 1'b1;
 	end else begin
@@ -241,14 +266,8 @@ always @(posedge clk) begin
 			if (next_port[0] != PORT_NONE) begin
 				state[0] <= port1_req;
 				sd_cmd <= CMD_ACTIVE;
-`ifdef NANO
-			        // TODO: make this correctly via ROW/COL width defines
-				SDRAM_A <= addr_latch_next[0][19:9];
-				SDRAM_BA <= addr_latch_next[0][21:20];
-`else
-			        SDRAM_A <= addr_latch_next[0][22:10];
-				SDRAM_BA <= addr_latch_next[0][24:23];
-`endif
+				SDRAM_A <= addr_latch_next[0][COLUMN_BITS+1 +: ROW_WIDTH];
+				SDRAM_BA <= addr_latch_next[0][BANK_LSB +: 2];
 				{ oe_latch[0], we_latch[0] } <= { ~port1_we, port1_we };
 				ds[0] <= port1_ds;
 				din_latch[0] <= port1_d;
@@ -265,8 +284,8 @@ always @(posedge clk) begin
 			if (next_port[1] != PORT_NONE) begin
 				state[1] <= port2_req;
 				sd_cmd <= CMD_ACTIVE;
-				SDRAM_A <= addr_latch_next[1][22:10];
-				SDRAM_BA <= addr_latch_next[1][24:23];
+				SDRAM_A <= addr_latch_next[1][COLUMN_BITS+1 +: ROW_WIDTH];
+				SDRAM_BA <= addr_latch_next[1][BANK_LSB +: 2];
 				{ oe_latch[1], we_latch[1] } <= { ~port2_we, port2_we };
 				ds[1] <= port2_ds;
 				din_latch[1] <= port2_d;
@@ -287,13 +306,10 @@ always @(posedge clk) begin
 				SDRAM_DQ_R <= din_latch[0];
 				port1_ack_reg <= port1_req;
 			end
-`ifdef NANO
-		        // TODO: make this correctly via ROW/COL width defines
-			SDRAM_A <= { 3'b100, addr_latch[0][8:1] };  // auto precharge
-`else
-			SDRAM_A <= { 4'b0010, addr_latch[0][9:1] };  // auto precharge
-			SDRAM_BA <= addr_latch[0][24:23];
-`endif
+			SDRAM_A <= '0;
+			SDRAM_A[10] <= 1'b1; // auto precharge
+			SDRAM_A[COLUMN_BITS-1:0] <= addr_latch[0][COLUMN_BITS:1];
+			SDRAM_BA <= addr_latch[0][BANK_LSB +: 2];
 		end
 
 		if(t == STATE_CAS1 && (we_latch[1] || oe_latch[1])) begin
@@ -303,8 +319,10 @@ always @(posedge clk) begin
 				SDRAM_DQ_R <= din_latch[1];
 				port2_ack_reg <= port2_req;
 			end
-			SDRAM_A <= { 4'b0010, addr_latch[1][9:1] };  // auto precharge
-			SDRAM_BA <= addr_latch[1][24:23];
+			SDRAM_A <= '0;
+			SDRAM_A[10] <= 1'b1; // auto precharge
+			SDRAM_A[COLUMN_BITS-1:0] <= addr_latch[1][COLUMN_BITS:1];
+			SDRAM_BA <= addr_latch[1][BANK_LSB +: 2];
 		end
 
 		// Data returned
@@ -325,9 +343,6 @@ always @(posedge clk) begin
 	        // this is a hack to prevent the cycle after the refresh cycle to be
 	        // unused. This may actually mess with the usage of the second port 
 	        // for gs as this has not been tested
-`ifdef ENABLE_GS
-	   "FIX ME!"
-`endif
 	   
 	        if(t == STATE_LAST)
 			refresh <= 0;
