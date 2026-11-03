@@ -49,6 +49,14 @@ module zxspectrum
    output [10:0] O_sdram_addr,	// 11 bit multiplexed address bus
    output [1:0]	 O_sdram_ba,	// two banks
    output [3:0]	 O_sdram_dqm,	// 32/4
+
+   // the nano has a second companion interface used when the
+   // on-board bl616 is being used as the companion
+   input	 spi_sclk,	// in 
+   input	 spi_csn,	// in
+   output	 spi_dir,	// out
+   input	 spi_dat,	// in
+   output	 spi_irqn,	// out
 `else
    output [`SDRAM_ROW_WIDTH-1:0] SDRAM_A,
    inout [15:0]	 SDRAM_DQ, 
@@ -1124,6 +1132,16 @@ companion companion (
     .mcu_ss(spi_io_ss),
     .mcu_intn(mcu_intn),
     .mcu_spare(mcu_spare),
+
+`ifdef MCU_ALT
+    // Alternate Companion SPI interface
+    // e.g. for the bl616 on the tang nano 20k
+    .mcu_alt_din(spi_dat),
+    .mcu_alt_dout(spi_dir),
+    .mcu_alt_clk(spi_sclk),
+    .mcu_alt_ss(spi_csn),
+    .mcu_alt_intn(spi_irqn),
+`endif
 
     .ws2812(ws2812),
 		     

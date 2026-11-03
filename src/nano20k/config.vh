@@ -1,5 +1,6 @@
 `define GOWIN
 `define NANO
+`define MCU_ALT
 
 `define SYS_CLK_28MHZ
 

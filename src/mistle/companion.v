@@ -14,6 +14,16 @@ module companion (
     output	 mcu_intn,
     input	 mcu_spare,
 
+`ifdef MCU_ALT
+    // Alternate Companion SPI interface
+    // e.g. for the bl616 on the tang nano 20k
+    input	 mcu_alt_din,
+    output	 mcu_alt_dout,
+    input	 mcu_alt_clk,
+    input	 mcu_alt_ss,
+    output	 mcu_alt_intn,
+`endif
+
     // SD card
     output	 sd_clk,
     inout	 sd_cmd,
@@ -60,14 +70,56 @@ wire [7:0] hid_data_out;
 wire [7:0] osd_data_out = 8'h55;  // OSD actually has no data output
 wire [7:0] sdc_data_out;  
 
+`ifdef MCU_ALT
+// intn and dout are outputs driven by the FPGA to the MCU
+// din, ss and clk are inputs coming from the MCU
+// onboard connection to on-board BL616 only newer 3921 assemblies 
+assign mcu_alt_intn = mcu_intn;
+assign mcu_alt_dout = mcu_dout;
+   
+// by default the alternate mcu is being used. Once there is
+// a select from the main mcu, then the connection is
+// being switched
+reg mcu_main;
+always @(posedge clk) begin
+    if(reset)
+        mcu_main = 1'b0;
+    else begin
+        // mcu_main is de-activated once the regulatar/external companion 
+        // drives ss low. This means that the external companion
+        // is connected and the FPGA switches its inputs to the
+        // main ones. Until then the inputs of the alternate companion are
+        // being used.
+        if(mcu_ss == 1'b0)
+            mcu_main = 1'b1;
+    end
+end
+
+// switch between internal SPI connected to the on-board bl616
+// or to the external one possibly connected to a M0S Dock
+wire mcu_active_din = mcu_main?mcu_din:mcu_alt_din;
+wire mcu_active_ss = mcu_main?mcu_ss:mcu_alt_ss;
+wire mcu_active_clk = mcu_main?mcu_clk:mcu_alt_clk;
+`endif
+
+   
+wire [15:0] audio [2];
+
 mcu_spi mcu (
   .clk(clk),
   .reset(reset),
 
   // SPI interface to FPGA Companion
+`ifdef MCU_ALT
+  .spi_io_ss (mcu_active_ss),
+  .spi_io_clk(mcu_active_clk),
+  .spi_io_din(mcu_active_din),
+`else
   .spi_io_ss (mcu_ss),
   .spi_io_clk(mcu_clk),
   .spi_io_din(mcu_din),
+`endif
+	     
   .spi_io_dout(mcu_dout),
 
   // byte wide data in/out to the submodules
